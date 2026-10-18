@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#10192a">
+  <title>星域守卫 · 塔防小游戏</title>
+  <style>
+    :root{color-scheme:dark;--ink:#eff6ff;--muted:#9cacc3;--mint:#87f2d4;--panel:#19253a}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100svh;display:grid;place-items:center;padding:16px;color:var(--ink);background:radial-gradient(ellipse at 50% 0%,#263d54 0,transparent 55%),#101725;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+    .app{width:min(980px,100%)}
+    header{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px}
+    .brand{display:flex;align-items:center;gap:12px}.logo{width:42px;height:42px;display:grid;place-items:center;border-radius:14px;background:#87f2d4;color:#102039;font-size:21px;font-weight:900;box-shadow:0 0 26px #87f2d433}
+    h1{font-size:20px;margin:0;letter-spacing:.04em}.subtitle{font-size:11px;color:var(--muted);margin-top:4px}
+    .stats{display:flex;gap:7px}.stat{min-width:74px;padding:8px 11px;text-align:center;background:#ffffff09;border:1px solid #dceaff18;border-radius:12px}.label{display:block;color:var(--muted);font-size:9px;margin-bottom:3px}.value{font-weight:800;font-size:16px;font-variant-numeric:tabular-nums}
+    .board{overflow:hidden;border:1px solid #d7e6ff25;border-radius:17px;background:#142335;box-shadow:0 20px 65px #0006}
+    canvas{display:block;width:100%;height:auto;aspect-ratio:900/520;touch-action:none}
+    .controls{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin-top:10px}
+    .towers{display:flex;gap:8px;min-width:0}
+    button{font:inherit;color:var(--ink);cursor:pointer;-webkit-tap-highlight-color:transparent}
+    .tower-btn{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 10px;background:#ffffff08;border:1px solid #dceaff1b;border-radius:12px;text-align:left}
+    .tower-btn:hover,.tower-btn.active{border-color:#87f2d4aa;background:#87f2d411}
+    .tower-icon{font-size:21px}.tower-name{display:block;font-size:11px;font-weight:750}.tower-cost{display:block;color:#a9bdd0;font-size:10px;margin-top:2px}
+    .action-buttons{display:flex;gap:7px}
+    .action{border:1px solid #dceaff21;border-radius:11px;padding:10px 13px;background:#ffffff0a;font-weight:750;font-size:11px;white-space:nowrap}
+    .action.primary{color:#13283a;background:var(--mint);border-color:transparent}
+    .action:disabled{opacity:.45;cursor:not-allowed}
+    .hint{min-height:16px;padding:9px 2px 0;color:var(--muted);font-size:11px}
+    .overlay{position:fixed;inset:0;z-index:3;display:grid;place-items:center;padding:18px;background:#09111dbb;backdrop-filter:blur(8px);transition:opacity .2s}
+    .overlay.hidden{opacity:0;pointer-events:none}
+    .card{width:min(390px,100%);text-align:center;padding:25px 24px 22px;border-radius:21px;border:1px solid #e5edff27;background:linear-gradient(150deg,#273c50,#1a253b);box-shadow:0 24px 75px #0008}
+    .eyebrow{color:var(--mint);font-size:10px;font-weight:850;letter-spacing:.22em}.card h2{font-size:28px;margin:8px 0}.card p{font-size:13px;line-height:1.8;color:#c1cddd;margin:0 0 18px}
+    .start{border:0;border-radius:12px;padding:12px 24px;color:#112538;background:var(--mint);font-weight:850;box-shadow:0 7px 26px #87f2d433}
+    @media(max-width:620px){body{padding:10px;align-content:center}.logo{width:35px;height:35px;border-radius:12px}h1{font-size:16px}.subtitle{font-size:9px}.stat{min-width:55px;padding:7px 6px}.label{font-size:8px}.value{font-size:14px}.controls{grid-template-columns:1fr;gap:7px}.tower-btn{gap:4px;padding:8px 5px}.tower-icon{font-size:17px}.tower-name{font-size:10px}.tower-cost{font-size:9px}.action-buttons{display:grid;grid-template-columns:1fr 1fr}.action{padding:9px 8px}.hint{padding-top:7px}}
+  </style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <div class="brand"><div class="logo">✦</div><div><h1>星域守卫 <span style="color:#87f2d4">·</span> STAR DEFENSE</h1><div class="subtitle">部署炮塔，守住星门，迎战一波又一波敌军</div></div></div>
+    <div class="stats" aria-live="polite">
+      <div class="stat"><span class="label">星币</span><span class="value" id="gold">160</span></div>
+      <div class="stat"><span class="label">生命</span><span class="value" id="lives">♥ 20</span></div>
+      <div class="stat"><span class="label">波次</span><span class="value" id="wave">0</span></div>
+    </div>
+  </header>
+  <section class="board"><canvas id="game" width="900" height="520" aria-label="塔防战场，可点选地块建造炮塔"></canvas></section>
+  <nav class="controls" aria-label="炮塔与游戏操作">
+    <div class="towers">
+      <button class="tower-btn" data-type="blaster"><span class="tower-icon">🔫</span><span><span class="tower-name">脉冲炮</span><span class="tower-cost">70 星币</span></span></button>
+      <button class="tower-btn" data-type="rapid"><span class="tower-icon">⚡</span><span><span class="tower-name">速射塔</span><span class="tower-cost">105 星币</span></span></button>
+      <button class="tower-btn" data-type="frost"><span class="tower-icon">❄️</span><span><span class="tower-name">寒冰塔</span><span class="tower-cost">90 星币</span></span></button>
+    </div>
+    <div class="action-buttons">
+      <button class="action" id="upgrade" disabled>⬆ 升级</button>
+      <button class="action primary" id="wave-btn">开始第 1 波 ▶</button>
+    </div>
+  </nav>
+  <div class="hint" id="hint">选择炮塔，再点击草地格子建造。点选已有炮塔可查看范围并升级或出售。</div>
+</main>
+<div class="overlay" id="overlay"><section class="card"><div class="eyebrow">DEFEND THE STAR GATE</div><h2 id="modal-title">星门遭到入侵！</h2><p id="modal-copy">在敌人沿着星际航道抵达星门前，用炮塔拦截他们。不同炮塔拥有不同射速与能力；点选炮塔即可升级。</p><button class="start" id="start">开始部署　✦</button></section></div>
+<script>
+(()=>{
+  "use strict";
+  const canvas=document.querySelector("#game"),ctx=canvas.getContext("2d"),$=id=>document.getElementById(id);
+  const W=900,H=520,CELL=40,COLS=22,ROWS=13,OFFSET_X=10,OFFSET_Y=0;
+  const path=[[-30,4],[3,4],[3,9],[8,9],[8,2],[13,2],[13,9],[18,9],[18,5],[24,5]];
+  const defs={
+    blaster:{name:"脉冲炮",icon:"🔫",cost:70,range:118,rate:.76,damage:22,color:"#ffd36f",speed:440},
+    rapid:{name:"速射塔",icon:"⚡",cost:105,range:96,rate:.23,damage:8,color:"#8debd4",speed:600},
+    frost:{name:"寒冰塔",icon:"❄️",cost:90,range:108,rate:1.05,damage:5,color:"#87caff",speed:360,slow:.55}
+  };
+  const pathPoints=path.map(([c,r])=>({x:OFFSET_X+c*CELL+CELL/2,y:OFFSET_Y+r*CELL+CELL/2}));
+  const segments=[];
+  let pathLength=0;
+  for(let i=1;i<pathPoints.length;i++){const a=pathPoints[i-1],b=pathPoints[i],len=Math.hypot(b.x-a.x,b.y-a.y);segments.push({a,b,len,start:pathLength});pathLength+=len;}
+  const pathAt=distance=>{
+    const d=Math.max(0,Math.min(distance,pathLength));
+    const seg=segments.find(s=>d<=s.start+s.len)||segments.at(-1),t=seg.len?(d-seg.start)/seg.len:0;
+    return{x:seg.a.x+(seg.b.x-seg.a.x)*t,y:seg.a.y+(seg.b.y-seg.a.y)*t};
+  };
+  const onPath=(c,r)=>{const x=OFFSET_X+c*CELL+CELL/2,y=OFFSET_Y+r*CELL+CELL/2;return segments.some(s=>{const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,l2=dx*dx+dy*dy,t=Math.max(0,Math.min(1,((x-s.a.x)*dx+(y-s.a.y)*dy)/l2));return Math.hypot(x-(s.a.x+t*dx),y-(s.a.y+t*dy))<CELL*.55;});};
+  let towers=[],enemies=[],shots=[],particles=[];
+  let gold=160,lives=20,wave=0,running=false,spawning=false,spawnLeft=0,spawnTimer=0,spawnGap=0,selected=null,buildType=null,hintTimer=0,last=performance.now(),totalKills=0;
+  let bestWave=0;
+  try{bestWave=Number(localStorage.getItem("star-defense-best")||0)}catch(_){}
+  const mouse={x:-100,y:-100};
+  const setHint=text=>{$("hint").textContent=text};
+  function hud(){$("gold").textContent=gold;$("lives").textContent="♥ "+lives;$("wave").textContent=wave||0;
+    $("upgrade").disabled=!selected||gold<upgradeCost(selected);
+    $("upgrade").textContent=selected?`⬆ 升级 (${upgradeCost(selected)})`:"⬆ 升级";
+    $("wave-btn").textContent=spawning?"敌军来袭…":`开始第 ${wave+1} 波 ▶`;
+    $("wave-btn").disabled=spawning||!running;
+  }
+  function upgradeCost(t){return Math.round(55+t.level*45);}
+  function start(){
+    gold=160;lives=20;wave=0;running=true;spawning=false;spawnLeft=0;selected=null;buildType=null;
+    towers=[];enemies=[];shots=[];particles=[];$("overlay").classList.add("hidden");setHint("选择炮塔，再点击草地格子建造。点选已有炮塔可查看范围并升级或出售。");hud();last=performance.now();
+  }
+  $("start").onclick=start;
+  document.querySelectorAll(".tower-btn").forEach(btn=>btn.addEventListener("click",()=>{
+    if(!running)return;
+    const type=btn.dataset.type;
+    if(buildType===type){buildType=null;setHint("已取消建造。选择炮塔，再点击草地格子。");}
+    else {buildType=type;selected=null;const d=defs[type];setHint(`${d.icon} ${d.name}：${d.cost} 星币。点击不在航道上的草地格子部署。`);}
+    document.querySelectorAll(".tower-btn").forEach(b=>b.classList.toggle("active",b.dataset.type===buildType));hud();
+  }));
+  $("wave-btn").onclick=()=>{
+    if(!running||spawning)return;
+    wave++;spawnLeft=7+wave*3;spawnGap=Math.max(.31,.86-wave*.045);spawnTimer=.25;spawning=true;selected=null;buildType=null;
+    document.querySelectorAll(".tower-btn").forEach(b=>b.classList.remove("active"));
+    setHint(`第 ${wave} 波来袭！本波 ${spawnLeft} 名敌人。`);hud();
+  };
+  $("upgrade").onclick=()=>{
+    if(!selected||gold<upgradeCost(selected))return;
+    const cost=upgradeCost(selected);gold-=cost;selected.level++;
+    selected.range+=10;selected.damage=Math.round(selected.damage*1.38);selected.rate=Math.max(.15,selected.rate*.89);
+    setHint(`${defs[selected.type].name}已升至 Lv.${selected.level}！`);hud();
+  };
+  function sell(){
+    if(!selected)return;
+    const idx=towers.indexOf(selected);if(idx<0)return;
+    gold+=Math.round(selected.invested*.67);towers.splice(idx,1);selected=null;
+    setHint("炮塔已拆除，返还 67% 建造费用。");hud();
+  }
+  canvas.addEventListener("pointermove",e=>{const p=canvasPoint(e);mouse.x=p.x;mouse.y=p.y;});
+  canvas.addEventListener("pointerleave",()=>{mouse.x=-100;mouse.y=-100;});
+  canvas.addEventListener("pointerdown",e=>{
+    e.preventDefault();if(!running)return;
+    const p=canvasPoint(e),c=Math.floor(p.x/CELL),r=Math.floor(p.y/CELL);
+    if(c<0||c>=COLS||r<0||r>=ROWS)return;
+    const existing=towers.find(t=>Math.hypot(t.x-p.x,t.y-p.y)<18);
+    if(existing){selected=existing;buildType=null;document.querySelectorAll(".tower-btn").forEach(b=>b.classList.remove("active"));setHint(`${defs[existing.type].icon} ${defs[existing.type].name} Lv.${existing.level} · 选择升级，或再次点击拆除返还 67%。`);hud();return;}
+    if(selected&&!buildType){sell();return;}
+    if(!buildType){selected=null;setHint("先选择一种炮塔，再点击空地建造。");hud();return;}
+    const def=defs[buildType];
+    if(onPath(c,r)){setHint("航道上不能建造炮塔，试试旁边的草地格子。");return;}
+    if(towers.some(t=>Math.hypot(t.x-p.x,t.y-p.y)<CELL*.78)){setHint("炮塔之间需要留出空间。");return;}
+    if(gold<def.cost){setHint("星币不足！击败敌人可以获得星币。");return;}
+    gold-=def.cost;
+    selected={x:OFFSET_X+c*CELL+CELL/2,y:OFFSET_Y+r*CELL+CELL/2,type:buildType,level:1,
+      range:def.range,rate:def.rate,cool:0,damage:def.damage,color:def.color,speed:def.speed,slow:def.slow||0,invested:def.cost};
+    towers.push(selected);setHint(`${def.icon} ${def.name}已部署！点选后升级，或点击它拆除。`);hud();
+  });
+  canvas.addEventListener("contextmenu",e=>{e.preventDefault();if(selected){selected=null;hud();}});
+  function canvasPoint(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};}
+  function spawnEnemy(){
+    const elite=wave>=3&&Math.random()<Math.min(.13,wave*.018);
+    const hp=(32+wave*12)*(elite?2.25:1);
+    enemies.push({distance:0,hp,maxHp:hp,speed:(42+Math.min(wave*2.4,27))*(elite?.77:1),radius:elite?13:10,
+      reward:elite?24:10,slowTimer:0,slowFactor:1,elite,phase:Math.random()*6});
+  }
+  function burst(x,y,color,count=7){
+    for(let i=0;i<count;i++){const a=Math.random()*6.283,s=35+Math.random()*105;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.3+Math.random()*.4,max:.7,color,size:2+Math.random()*3});}
+  }
+  function aim(t){
+    let target=null,best=-1;
+    for(const e of enemies){const p=pathAt(e.distance),d=Math.hypot(p.x-t.x,p.y-t.y);if(d<=t.range&&e.distance>best){target=e;best=e.distance;}}
+    return target;
+  }
+  function update(dt){
+    hintTimer+=dt;
+    if(spawning){
+      spawnTimer-=dt;
+      if(spawnTimer<=0&&spawnLeft>0){spawnEnemy();spawnLeft--;spawnTimer=spawnGap;}
+      if(spawnLeft===0&&enemies.length===0){
+        spawning=false;gold+=18+wave*3;
+        setHint(`第 ${wave} 波守住了！获得波次奖励 ${18+wave*3} 星币，可升级防线。`);
+        if(wave>bestWave){bestWave=wave;try{localStorage.setItem("star-defense-best",String(wave))}catch(_){}}
+        hud();
+      }
+    }
+    for(const e of enemies){
+      if(e.slowTimer>0)e.slowTimer=Math.max(0,e.slowTimer-dt);else e.slowFactor=1;
+      e.distance+=e.speed*(e.slowTimer>0?e.slowFactor:1)*dt;
+    }
+    for(const t of towers){
+      t.cool-=dt;
+      if(t.cool<=0){
+        const target=aim(t);
+        if(target){const p=pathAt(target.distance);shots.push({x:t.x,y:t.y,target,damage:t.damage,speed:t.speed,color:t.color,slow:t.slow||0});t.cool=t.rate;}
+      }
+    }
+    for(const s of shots){
+      if(!enemies.includes(s.target))continue;
+      const p=pathAt(s.target.distance),dx=p.x-s.x,dy=p.y-s.y,d=Math.hypot(dx,dy),step=s.speed*dt;
+      if(d<=step+5){
+        s.target.hp-=s.damage;burst(p.x,p.y,s.color,4);
+        if(s.slow){s.target.slowTimer=1.4;s.target.slowFactor=s.slow;}
+        s.dead=true;
+        if(s.target.hp<=0){const idx=enemies.indexOf(s.target);if(idx>=0){enemies.splice(idx,1);gold+=s.target.reward;totalKills++;burst(p.x,p.y,s.target.elite?"#ffca75":"#ff8c9c",9);hud();}}
+      }else{s.x+=dx/d*step;s.y+=dy/d*step;}
+    }
+    shots=shots.filter(s=>!s.dead&&enemies.includes(s.target));
+    for(let i=enemies.length-1;i>=0;i--)if(enemies[i].distance>=pathLength){enemies.splice(i,1);lives--;burst(pathPoints.at(-1).x,pathPoints.at(-1).y,"#ff6d82",12);hud();if(lives<=0){endGame();return;}}
+    particles=particles.filter(p=>p.life>0);
+    for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=65*dt;p.life-=dt;}
+    if(!spawning&&wave===0&&hintTimer>5){hintTimer=0;setHint("提示：速射塔攻速快，寒冰塔可减速，脉冲炮射程更远。");}
+  }
+  function endGame(){
+    running=false;spawning=false;selected=null;buildType=null;
+    $("modal-title").textContent="星门失守";
+    $("modal-copy").innerHTML=`你守住了 <strong style="color:#87f2d4">${wave}</strong> 波，击败 ${totalKills} 名敌人。<br>最佳波次：${bestWave}　重新布防，再守一次！`;
+    $("start").textContent="重新挑战　✦";$("overlay").classList.remove("hidden");hud();
+  }
+  function rounded(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);}
+  function draw(){
+    const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,"#172538");sky.addColorStop(1,"#263b46");ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+    // distant starfield
+    for(let i=0;i<60;i++){const x=(i*157+19)%W,y=(i*83+27)%H;ctx.globalAlpha=.16+.18*(.5+.5*Math.sin(performance.now()/700+i));ctx.fillStyle="#d9f2ff";ctx.fillRect(x,y,2,2);}
+    ctx.globalAlpha=1;
+    // soft landscape tiles
+    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+      const x=OFFSET_X+c*CELL,y=OFFSET_Y+r*CELL;
+      ctx.fillStyle=(r+c)%2?"#344d48":"#38524b";ctx.fillRect(x+1,y+1,CELL-2,CELL-2);
+      ctx.fillStyle="#d7efcf09";ctx.fillRect(x+5,y+6,2,2);
+    }
+    // broad winding road
+    ctx.lineCap="round";ctx.lineJoin="round";
+    ctx.beginPath();pathPoints.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+    ctx.strokeStyle="#17232c";ctx.lineWidth=50;ctx.stroke();
+    ctx.beginPath();pathPoints.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+    ctx.strokeStyle="#887d69";ctx.lineWidth=41;ctx.stroke();
+    ctx.beginPath();pathPoints.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+    ctx.setLineDash([5,13]);ctx.strokeStyle="#d3c3a04b";ctx.lineWidth=2;ctx.stroke();ctx.setLineDash([]);
+    // start and gate
+    const startP=pathAt(6),gate=pathPoints.at(-1);
+    ctx.fillStyle="#89f2d4";ctx.shadowColor="#89f2d4";ctx.shadowBlur=17;ctx.beginPath();ctx.arc(startP.x,startP.y,13,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+    ctx.fillStyle="#d8fff4";ctx.font="bold 10px sans-serif";ctx.textAlign="center";ctx.fillText("START",startP.x,startP.y-21);
+    ctx.fillStyle="#ffd476";ctx.shadowColor="#ffd476";ctx.shadowBlur=20;ctx.beginPath();ctx.arc(gate.x-7,gate.y,16,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+    ctx.fillStyle="#253547";ctx.font="bold 9px sans-serif";ctx.fillText("GATE",gate.x-7,gate.y+3);
+    // placement preview/range
+    if(running&&mouse.x>=0&&buildType){
+      const c=Math.floor(mouse.x/CELL),r=Math.floor(mouse.y/CELL),d=defs[buildType],valid=c>=0&&c<COLS&&r>=0&&r<ROWS&&!onPath(c,r)&&!towers.some(t=>Math.hypot(t.x-(OFFSET_X+c*CELL+CELL/2),t.y-(OFFSET_Y+r*CELL+CELL/2))<CELL*.78)&&gold>=d.cost;
+      if(c>=0&&c<COLS&&r>=0&&r<ROWS){
+        const x=OFFSET_X+c*CELL+CELL/2,y=OFFSET_Y+r*CELL+CELL/2;
+        ctx.beginPath();ctx.arc(x,y,d.range,0,Math.PI*2);ctx.fillStyle=d.color+"12";ctx.fill();
+        ctx.strokeStyle=valid?d.color+"aa":"#ff6375aa";ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,16,0,Math.PI*2);ctx.stroke();
+      }
+    }
+    for(const t of towers){
+      if(t===selected){ctx.beginPath();ctx.arc(t.x,t.y,t.range,0,Math.PI*2);ctx.fillStyle=t.color+"12";ctx.fill();ctx.strokeStyle=t.color+"88";ctx.lineWidth=1.5;ctx.stroke();}
+      // tower base
+      ctx.fillStyle="#12202a";ctx.beginPath();ctx.arc(t.x,t.y+3,17,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=t.color;ctx.beginPath();ctx.arc(t.x,t.y,14,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle="#ffffff9a";ctx.lineWidth=2;ctx.stroke();
+      const target=aim(t);
+      if(target){const p=pathAt(target.distance);ctx.save();ctx.translate(t.x,t.y);ctx.rotate(Math.atan2(p.y-t.y,p.x-t.x));ctx.fillStyle="#26384a";rounded(0,-4,19,8,4);ctx.fill();ctx.restore();}
+      ctx.fillStyle="#12202a";ctx.font="bold 9px sans-serif";ctx.textAlign="center";ctx.fillText(defs[t.type].icon,t.x,t.y+3);
+      if(t.level>1){ctx.fillStyle="#fff2b2";ctx.font="bold 9px sans-serif";ctx.fillText("+"+(t.level-1),t.x+12,t.y-12);}
+    }
+    // bullets and beams
+    for(const s of shots){ctx.fillStyle=s.color;ctx.shadowColor=s.color;ctx.shadowBlur=10;ctx.beginPath();ctx.arc(s.x,s.y,4,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
+    for(const e of enemies){
+      const p=pathAt(e.distance),pulse=1+.08*Math.sin(performance.now()/115+e.phase);
+      ctx.save();ctx.translate(p.x,p.y);ctx.scale(pulse,pulse);
+      ctx.fillStyle=e.elite?"#c475ef":"#f0747b";ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=e.elite?14:8;
+      ctx.beginPath();ctx.arc(0,0,e.radius,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+      ctx.fillStyle="#fff1de";ctx.beginPath();ctx.arc(3,-3,2.3,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+      const bw=e.radius*2.5;ctx.fillStyle="#241f2a";ctx.fillRect(p.x-bw/2,p.y-e.radius-8,bw,3);
+      ctx.fillStyle=e.elite?"#e0a5ff":"#ff99a0";ctx.fillRect(p.x-bw/2,p.y-e.radius-8,bw*Math.max(0,e.hp/e.maxHp),3);
+    }
+    for(const p of particles){ctx.globalAlpha=Math.max(0,p.life/p.max);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();}
+    ctx.globalAlpha=1;
+    if(selected&&!buildType){
+      const boxY=H-37;ctx.fillStyle="#101b2bdd";rounded(14,boxY,365,26,8);ctx.fill();
+      ctx.fillStyle="#edf6ff";ctx.font="11px sans-serif";ctx.textAlign="left";
+      ctx.fillText(`${defs[selected.type].name} Lv.${selected.level}　伤害 ${selected.damage}　范围 ${Math.round(selected.range)}　·　再次点击拆除`,25,boxY+17);
+    }
+  }
+  function frame(now){const dt=Math.min(.035,Math.max(0,(now-last)/1000||0));last=now;if(running)update(dt);draw();requestAnimationFrame(frame);}
+  hud();requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
