@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#15251f">
+  <title>月光花园守卫 · 花园防守小游戏</title>
+  <style>
+    :root{color-scheme:dark;--ink:#f3f5e9;--muted:#b4c2af;--lime:#c4ee83;--panel:#1d3129}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100svh;display:grid;place-items:center;padding:14px;color:var(--ink);background:radial-gradient(ellipse at 50% -8%,#48694a66,transparent 56%),#131d1a;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+    .app{width:min(1050px,100%)}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:11px}
+    .brand{display:flex;align-items:center;gap:11px}.logo{width:42px;height:42px;display:grid;place-items:center;border-radius:14px;color:#203327;background:linear-gradient(145deg,#e9efa0,#92dc88);font-size:23px;box-shadow:0 0 24px #b7e99036}
+    h1{font-size:19px;margin:0;letter-spacing:.035em}.subtitle{margin-top:3px;font-size:10px;color:var(--muted)}
+    .hud{display:flex;gap:7px}.stat{min-width:74px;padding:8px 10px;text-align:center;background:#ffffff0b;border:1px solid #e5f3dd1a;border-radius:12px}.label{display:block;color:var(--muted);font-size:9px;margin-bottom:3px}.value{font-size:16px;font-weight:850;font-variant-numeric:tabular-nums}
+    .top-controls{display:flex;gap:6px}
+    button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+    .small-btn{border:1px solid #e5f3dd22;border-radius:10px;background:#ffffff0a;padding:8px 10px;font-size:10px;font-weight:750}
+    .small-btn:hover{background:#ffffff16}
+    .board-wrap{overflow:hidden;padding:6px;border:1px solid #e5f3dd22;border-radius:17px;background:linear-gradient(150deg,#394b34,#27372c);box-shadow:0 20px 60px #0006}
+    canvas{display:block;width:100%;height:auto;aspect-ratio:1000/570;border-radius:11px;touch-action:none}
+    .bar{display:flex;align-items:center;gap:7px;margin-top:9px;overflow-x:auto;padding-bottom:2px}
+    .unit{display:flex;align-items:center;gap:7px;min-width:104px;padding:7px 9px;border-radius:11px;border:1px solid #e3f0d91d;background:#ffffff09;text-align:left}
+    .unit.active{border-color:#c4ee83a8;background:#c4ee8313}
+    .unit:disabled{opacity:.48;cursor:not-allowed}
+    .unit-icon{font-size:21px}
+    .unit-name{display:block;font-size:10px;font-weight:800}
+    .unit-cost{display:block;margin-top:2px;color:#cad3b7;font-size:9px}
+    .sunbox{display:flex;align-items:center;gap:6px;min-width:91px;padding:8px 10px;border-radius:11px;border:1px solid #f7e5973d;background:#f7e5970d}
+    .sunbox .sun-icon{font-size:20px}.sunbox span:last-child{font-size:15px;font-weight:850;color:#ffe898}
+    .bar-spacer{flex:1}
+    .hint{min-height:17px;padding:8px 3px 0;color:var(--muted);font-size:10px}
+    .overlay{position:fixed;inset:0;z-index:3;display:grid;place-items:center;padding:17px;background:#0a1210ba;backdrop-filter:blur(8px);transition:opacity .2s}
+    .overlay.hidden{opacity:0;pointer-events:none}
+    .card{width:min(400px,100%);padding:24px 23px 22px;text-align:center;border-radius:21px;border:1px solid #e5f3dd2c;background:linear-gradient(150deg,#314838,#203329);box-shadow:0 24px 76px #0008}
+    .eyebrow{color:var(--lime);font-size:10px;font-weight:850;letter-spacing:.19em}
+    .card h2{margin:8px 0;font-size:27px}.card p{margin:0 0 17px;color:#d0dbc8;font-size:12px;line-height:1.8}
+    .start{border:0;border-radius:12px;padding:12px 23px;background:linear-gradient(100deg,#d8ef8e,#94e2a2);color:#203327;font-size:13px;font-weight:900;box-shadow:0 7px 24px #c4ee8333}
+    @media(max-width:640px){body{padding:9px;align-content:center}.logo{width:35px;height:35px;font-size:19px}.brand{gap:8px}h1{font-size:15px}.subtitle{font-size:9px}.hud{gap:4px}.stat{min-width:48px;padding:6px 5px}.label{font-size:8px}.value{font-size:13px}.top-controls{gap:3px}.small-btn{font-size:9px;padding:7px 7px}.board-wrap{padding:4px;border-radius:13px}.bar{gap:5px}.unit{min-width:87px;padding:6px 6px;gap:5px}.unit-icon{font-size:17px}.unit-name{font-size:9px}.unit-cost{font-size:8px}.sunbox{min-width:64px;padding:7px 6px}.sunbox .sun-icon{font-size:17px}.sunbox span:last-child{font-size:13px}}
+  </style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <div class="brand"><div class="logo">❀</div><div><h1>月光花园守卫</h1><div class="subtitle">MOON GARDEN GUARD · 原创花园防守小游戏</div></div></div>
+    <div class="hud" aria-live="polite">
+      <div class="stat"><span class="label">花蜜</span><span class="value" id="sun">150</span></div>
+      <div class="stat"><span class="label">花园</span><span class="value" id="health">♥ 5</span></div>
+      <div class="stat"><span class="label">夜晚</span><span class="value" id="wave">0 / 5</span></div>
+    </div>
+    <div class="top-controls"><button class="small-btn" id="pause">Ⅱ 暂停</button><button class="small-btn" id="restart">↻ 重来</button></div>
+  </header>
+  <section class="board-wrap"><canvas id="game" width="1000" height="570" aria-label="五行花园防守战场"></canvas></section>
+  <nav class="bar" aria-label="选择花园守卫">
+    <div class="sunbox"><span class="sun-icon">✹</span><span id="nectar">150</span></div>
+    <button class="unit" data-unit="sun"><span class="unit-icon">🌼</span><span><span class="unit-name">采光花</span><span class="unit-cost">50 花蜜</span></span></button>
+    <button class="unit" data-unit="seed"><span class="unit-icon">🌱</span><span><span class="unit-name">籽弹芽</span><span class="unit-cost">75 花蜜</span></span></button>
+    <button class="unit" data-unit="thorn"><span class="unit-icon">🌵</span><span><span class="unit-name">荆棘果</span><span class="unit-cost">100 花蜜</span></span></button>
+    <button class="unit" data-unit="frost"><span class="unit-icon">❄️</span><span><span class="unit-name">霜铃花</span><span class="unit-cost">85 花蜜</span></span></button>
+    <span class="bar-spacer"></span>
+    <button class="small-btn" id="start-wave">迎接第 1 夜 ▶</button>
+  </nav>
+  <div class="hint" id="hint">收集花蜜，选择守卫后点击空地种植。先放几株采光花，持续产出花蜜。</div>
+</main>
+<div class="overlay" id="overlay"><section class="card"><div class="eyebrow" id="eyebrow">A NEW GARDEN DEFENSE</div><h2 id="modal-title">月亮升起来了</h2><p id="modal-copy">夜行的小怪物正沿着花园小径靠近！种下采光花收集花蜜，用籽弹芽、荆棘果和霜铃花守住五条小径，平安度过五个夜晚。</p><button class="start" id="start">开始守护　❀</button></section></div>
+<script>
+(()=>{
+  "use strict";
+  const canvas=document.querySelector("#game"),ctx=canvas.getContext("2d"),$=id=>document.getElementById(id);
+  const W=1000,H=570,ROWS=5,COLS=9,CW=100,CH=94,LEFT=95,TOP=66;
+  const prices={sun:50,seed:75,thorn:100,frost:85};
+  const info={
+    sun:{name:"采光花",icon:"🌼",color:"#ffe58b"},
+    seed:{name:"籽弹芽",icon:"🌱",color:"#a8ed99"},
+    thorn:{name:"荆棘果",icon:"🌵",color:"#ffba83"},
+    frost:{name:"霜铃花",icon:"❄️",color:"#b8e8ff"}
+  };
+  let grid=[],enemies=[],shots=[],nectars=[],particles=[],nectar=150,health=5,wave=0;
+  let running=false,paused=false,spawning=false,spawnLeft=0,spawnTimer=0,spawnGap=1.3;
+  let elapsed=0,selected=null,hover=null,last=performance.now(),cooldowns={},hintTimer=0;
+  let sunClock=5,success=false;
+  const laneY=r=>TOP+r*CH+CH/2;
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const cellPoint=(r,c)=>({x:LEFT+c*CW+CW/2,y:TOP+r*CH+CH/2});
+  const inCell=(p)=>{const c=Math.floor((p.x-LEFT)/CW),r=Math.floor((p.y-TOP)/CH);return r>=0&&r<ROWS&&c>=0&&c<COLS?{r,c}:null;};
+  const units=()=>grid.flat().filter(Boolean);
+  function setHint(t){$("hint").textContent=t;}
+  function hud(){
+    $("sun").textContent=nectar;$("nectar").textContent=nectar;
+    $("health").textContent="♥ "+health;$("wave").textContent=`${wave} / 5`;
+    $("start-wave").disabled=!running||paused||spawning||wave>=5;
+    $("start-wave").textContent=spawning?"夜行者来了…":wave>=5?"花园安宁 ✦":`迎接第 ${wave+1} 夜 ▶`;
+    document.querySelectorAll(".unit").forEach(b=>{
+      b.disabled=!running||paused||nectar<prices[b.dataset.unit];
+      b.classList.toggle("active",selected===b.dataset.unit);
+    });
+    $("pause").textContent=paused?"▶ 继续":"Ⅱ 暂停";
+    $("pause").disabled=!running||success;
+  }
+  function reset(){
+    grid=Array.from({length:ROWS},()=>Array(COLS).fill(null));
+    enemies=[];shots=[];nectars=[];particles=[];nectar=150;health=5;wave=0;
+    running=true;paused=false;spawning=false;spawnLeft=0;selected=null;hover=null;
+    cooldowns={};sunClock=5;success=false;elapsed=0;hintTimer=0;
+    $("overlay").classList.add("hidden");setHint("收集花蜜，选择守卫后点击空地种植。先放几株采光花，持续产出花蜜。");hud();last=performance.now();
+  }
+  function end(win){
+    if(!running)return;running=false;paused=false;spawning=false;success=win;selected=null;hud();
+    $("eyebrow").textContent=win?"GARDEN SAVED":"THE GARDEN NEEDS YOU";
+    $("modal-title").textContent=win?"整座花园都在发光！":"月光下的花园失守了";
+    $("modal-copy").innerHTML=win?"五个夜晚平安过去，所有小径都被守住了。<br>你的花园防守得真漂亮！":`你守到了第 <strong style="color:#d6f09a">${wave}</strong> 个夜晚。<br>换一种种植策略，再来守护一次吧。`;
+    $("start").textContent=win?"再玩一次　❀":"重新守护　❀";$("overlay").classList.remove("hidden");
+  }
+  $("start").addEventListener("click",()=>{if(running&&wave===0){$("overlay").classList.add("hidden");return;}reset();});
+  $("restart").addEventListener("click",()=>{
+    grid=Array.from({length:ROWS},()=>Array(COLS).fill(null));enemies=[];shots=[];nectars=[];particles=[];
+    nectar=150;health=5;wave=0;running=true;paused=false;spawning=false;spawnLeft=0;
+    selected=null;hover=null;cooldowns={};sunClock=5;success=false;elapsed=0;hintTimer=0;
+    $("overlay").classList.add("hidden");setHint("新花园已准备好。先种采光花，再布置防线！");hud();last=performance.now();
+  });
+  $("pause").addEventListener("click",()=>{if(!running)return;paused=!paused;setHint(paused?"时间暂停，花园暂时安全。":"继续守护花园！");hud();last=performance.now();});
+  $("start-wave").addEventListener("click",()=>{
+    if(!running||paused||spawning||wave>=5)return;
+    wave++;spawnLeft=5+wave*3;spawnGap=Math.max(.63,1.35-wave*.10);spawnTimer=.45;spawning=true;
+    setHint(`第 ${wave} 个夜晚开始！${spawnLeft} 个夜行者正在靠近。`);hud();
+  });
+  document.querySelectorAll(".unit").forEach(btn=>btn.addEventListener("click",()=>{
+    if(!running||paused)return;
+    const type=btn.dataset.unit;
+    if(nectar<prices[type]){setHint("花蜜不够啦！采光花会随时间产出花蜜。");return;}
+    selected=selected===type?null:type;setHint(selected?`${info[type].icon} ${info[type].name}：${prices[type]} 花蜜。点击空地种植。`:"已取消种植。");hud();
+  }));
+  function canvasPoint(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};}
+  canvas.addEventListener("pointermove",e=>{hover=canvasPoint(e);});
+  canvas.addEventListener("pointerleave",()=>{hover=null;});
+  canvas.addEventListener("pointerdown",e=>{
+    e.preventDefault();if(!running||paused)return;
+    const p=canvasPoint(e);
+    // Collect the floating nectar droplets by tapping them.
+    for(let i=nectars.length-1;i>=0;i--)if(Math.hypot(nectars[i].x-p.x,nectars[i].y-p.y)<28){
+      const drop=nectars.splice(i,1)[0];nectar+=drop.value;burst(drop.x,drop.y,"#ffe78c",9);setHint(`收集到 ${drop.value} 点花蜜！`);hud();return;
+    }
+    const cell=inCell(p);if(!cell)return;
+    const existing=grid[cell.r][cell.c];
+    if(existing){
+      if(selected===null&&existing.type!=="sun"){
+        const refund=Math.floor(prices[existing.type]*.55);nectar+=refund;grid[cell.r][cell.c]=null;
+        setHint(`拆除了${info[existing.type].name}，回收 ${refund} 花蜜。`);hud();
+      }else setHint(`${info[existing.type].name}正在守护这条小径。`);
+      return;
+    }
+    if(!selected){setHint("先选择一种花园守卫，再点击空地种植。");return;}
+    const type=selected;if(nectar<prices[type]){setHint("花蜜不够啦！");return;}
+    nectar-=prices[type];const pos=cellPoint(cell.r,cell.c);
+    grid[cell.r][cell.c]={type,row:cell.r,col:cell.c,x:pos.x,y:pos.y,age:0,attack:rand(.2,.8),shine:rand(0,6.2)};
+    burst(pos.x,pos.y,info[type].color,5);setHint(`${info[type].name}种好啦！${type==="sun"?"它会持续产生花蜜。":"守住它所在的小径！"}`);hud();
+  });
+  function waveEnemy(){
+    const armored=wave>=3&&Math.random()<.27;
+    const hp=(48+wave*19)*(armored?2.1:1);
+    const lane=Math.floor(Math.random()*ROWS);
+    enemies.push({row:lane,x:W+rand(10,70),y:laneY(lane),hp,maxHp:hp,
+      speed:rand(12,17)+wave*1.55,radius:armored?22:19,armored,slow:0,phase:rand(0,6.2),attack:0,hitFlash:0});
+  }
+  function burst(x,y,color,n=7){
+    for(let i=0;i<n;i++){const a=Math.random()*6.283,s=rand(35,125);particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-20,life:rand(.3,.65),max:.65,color,size:rand(2,4)});}
+  }
+  function spawnNectar(x,y,value=25){
+    nectars.push({x,y,baseY:y,bob:rand(0,6.2),value,life:13});
+  }
+  function update(dt){
+    elapsed+=dt;hintTimer+=dt;
+    // Resource flowers make small collectible nectar; the sky drops one occasionally.
+    sunClock-=dt;
+    if(sunClock<=0){sunClock=rand(7,10);spawnNectar(rand(LEFT+40,LEFT+COLS*CW-40),rand(TOP+24,TOP+ROWS*CH-30),25);}
+    for(const p of units()){
+      p.age+=dt;p.attack-=dt;
+      if(p.type==="sun"&&p.age>=4.7){p.age=0;spawnNectar(p.x+rand(-8,8),p.y-23,25);}
+      if((p.type==="seed"||p.type==="thorn"||p.type==="frost")&&p.attack<=0){
+        const target=enemies.find(e=>e.row===p.row&&e.x>p.x-5);
+        if(target){const speed=p.type==="thorn"?400:p.type==="frost"?320:355;
+          shots.push({x:p.x+20,y:p.y-5,row:p.row,target,speed,damage:p.type==="thorn"?32:p.type==="frost"?12:20,
+            color:p.type==="thorn"?"#ffad78":p.type==="frost"?"#a6e7ff":"#b8ed8f",slow:p.type==="frost"?.55:0,r:p.type==="thorn"?8:6});
+          p.attack=p.type==="thorn"?1.2:p.type==="frost"?1.05:.9;
+        }
+      }
+    }
+    if(spawning){
+      spawnTimer-=dt;
+      if(spawnTimer<=0&&spawnLeft>0){waveEnemy();spawnLeft--;spawnTimer=spawnGap;}
+    }
+    for(const shot of shots){
+      if(!enemies.includes(shot.target)){shot.dead=true;continue;}
+      shot.x+=shot.speed*dt;
+      if(shot.x>=shot.target.x-shot.target.radius){
+        const e=shot.target;e.hp-=shot.damage;e.hitFlash=.12;
+        if(shot.slow){e.slow=2.1;}
+        burst(e.x,e.y,shot.color,4);shot.dead=true;
+        if(e.hp<=0){const i=enemies.indexOf(e);if(i>=0)enemies.splice(i,1);spawnNectar(e.x,e.y-7,10);burst(e.x,e.y,e.armored?"#d7bcff":"#b9dc98",10);}
+      }
+    }
+    shots=shots.filter(s=>!s.dead&&s.x<W+30);
+    for(const e of enemies){
+      if(e.hitFlash>0)e.hitFlash-=dt;
+      if(e.slow>0)e.slow=Math.max(0,e.slow-dt);
+      const col=Math.floor((e.x-LEFT)/CW);
+      const c=clamp(col,0,COLS-1),plant=grid[e.row]?.[c];
+      if(plant&&e.x-e.radius<plant.x+26&&e.x>plant.x-24){
+        e.attack-=dt;
+        if(e.attack<=0){if(plant.type==="sun"){nectar+=5;grid[e.row][c]=null;hud();}else{plant.hp=(plant.hp??130)-22;if(plant.hp<=0)grid[e.row][c]=null;}e.attack=.78;burst(plant.x+rand(-10,10),plant.y+7,"#c2b88a",2);}
+      }else e.x-=(e.speed*(e.slow>0?.48:1))*dt;
+      if(e.x<LEFT-24){enemies.splice(enemies.indexOf(e),1);health--;burst(LEFT-16,e.y,"#ff9a8c",11);hud();if(health<=0){end(false);return;}}
+    }
+    for(const d of nectars){d.life-=dt;d.bob+=dt*2.4;d.y=d.baseY+Math.sin(d.bob)*4;}
+    nectars=nectars.filter(d=>d.life>0);
+    particles=particles.filter(p=>p.life>0);
+    for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=95*dt;p.life-=dt;}
+    if(spawning&&spawnLeft===0&&enemies.length===0){
+      spawning=false;nectar+=30+wave*8;
+      setHint(`第 ${wave} 个夜晚平安度过！奖励 ${30+wave*8} 花蜜。`);
+      if(wave>=5){end(true);return;}hud();
+    }
+    if(!spawning&&wave===0&&hintTimer>8){hintTimer=0;setHint("夜色渐深，点击画面上发光的花蜜收集资源。");}
+  }
+  function end(win){
+    if(!running)return;running=false;paused=false;spawning=false;success=win;
+    $("eyebrow").textContent=win?"GARDEN UNDER THE MOONLIGHT":"A NIGHT IN THE GARDEN";
+    $("modal-title").textContent=win?"月光花园，守护成功！":"夜行者闯进花园了";
+    $("modal-copy").innerHTML=win?"五个夜晚都平安过去了！每一条小径都开满了守护的花。<br>真是一座闪闪发光的花园。":"这次的花园守到第 <strong style='color:#d6f09a'>"+wave+"</strong> 个夜晚。<br>调整布阵，再来迎接下一次月升吧。";
+    $("start").textContent=win?"再玩一次　❀":"重新种下花朵　❀";$("overlay").classList.remove("hidden");hud();
+  }
+  function rr(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);}
+  function drawSky(){
+    const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,"#182b3b");bg.addColorStop(.5,"#293e3a");bg.addColorStop(1,"#344a35");ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+    // Moon and distant hills.
+    ctx.fillStyle="#f3efc9";ctx.globalAlpha=.88;ctx.beginPath();ctx.arc(852,54,27,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+    ctx.fillStyle="#d1e5bf22";ctx.beginPath();ctx.ellipse(855,58,39,10,-.2,0,Math.PI*2);ctx.fill();
+    for(let i=0;i<45;i++){const x=(i*197+23)%W,y=(i*79+9)%220;ctx.globalAlpha=.2+.25*(.5+.5*Math.sin(elapsed+i));ctx.fillStyle="#f1f6d9";ctx.fillRect(x,y,2,2);}ctx.globalAlpha=1;
+    ctx.fillStyle="#375244";ctx.beginPath();ctx.moveTo(0,220);ctx.quadraticCurveTo(210,175,375,222);ctx.quadraticCurveTo(610,158,1000,220);ctx.lineTo(1000,H);ctx.lineTo(0,H);ctx.fill();
+  }
+  function drawGarden(){
+    drawSky();
+    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+      const x=LEFT+c*CW,y=TOP+r*CH;
+      ctx.fillStyle=(r+c)%2?"#70945c":"#789b62";ctx.fillRect(x+1,y+1,CW-2,CH-2);
+      ctx.fillStyle="#e8efc514";ctx.beginPath();ctx.ellipse(x+19+(r*9+c*11)%49,y+21+(c*7)%46,8,2,-.45,0,Math.PI*2);ctx.fill();
+      if(hover){const p=cellPoint(r,c);if(hover.x>=x&&hover.x<x+CW&&hover.y>=y&&hover.y<y+CH){ctx.fillStyle=selected?"#efffb91a":"#ffffff0d";ctx.fillRect(x+2,y+2,CW-4,CH-4);}}
+      const p=grid[r][c];if(p)drawPlant(p);
+    }
+    // Decorative garden border.
+    ctx.strokeStyle="#d9edb03b";ctx.lineWidth=2;ctx.strokeRect(LEFT,TOP,COLS*CW,ROWS*CH);
+    // Exit fence: the garden's west side is the defended edge.
+    ctx.fillStyle="#b8a47b";for(let r=0;r<ROWS;r++){const y=laneY(r);ctx.fillRect(48,y-30,10,60);ctx.fillRect(40,y-28,26,7);}
+    ctx.fillStyle="#f1e4c2";ctx.font="bold 10px sans-serif";ctx.textAlign="center";ctx.fillText("花园",52,TOP-13);
+    for(const d of nectars){
+      ctx.save();ctx.globalAlpha=Math.min(1,d.life);ctx.shadowColor="#ffe87f";ctx.shadowBlur=18;
+      const g=ctx.createRadialGradient(d.x-5,d.y-6,1,d.x,d.y,17);g.addColorStop(0,"#fff8c8");g.addColorStop(.5,"#ffdc63");g.addColorStop(1,"#f5a936");
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(d.x,d.y,15,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+      ctx.fillStyle="#fffbe2";ctx.font="bold 13px sans-serif";ctx.textAlign="center";ctx.fillText("✦",d.x,d.y+4);ctx.restore();
+    }
+    for(const s of shots){
+      ctx.save();ctx.fillStyle=s.color;ctx.shadowColor=s.color;ctx.shadowBlur=11;
+      if(s.r>6){ctx.beginPath();ctx.ellipse(s.x,s.y,s.r,s.r*.7,.3,0,Math.PI*2);ctx.fill();}
+      else{ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();}
+      ctx.restore();
+    }
+    for(const e of enemies)drawEnemy(e);
+    for(const p of particles){ctx.globalAlpha=Math.max(0,p.life/p.max);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
+    if(spawning){
+      const remaining=spawnLeft+enemies.length;
+      ctx.fillStyle="#0f211bbd";rr(LEFT+8,TOP+8,118,25,9);ctx.fill();
+      ctx.fillStyle="#f4f4d9";ctx.font="bold 10px sans-serif";ctx.textAlign="left";ctx.fillText(`夜 ${wave}  ·  夜行者 ${remaining}`,LEFT+18,TOP+25);
+    }else if(running&&!paused&&wave>0){
+      ctx.fillStyle="#0f211b99";rr(LEFT+8,TOP+8,104,25,9);ctx.fill();
+      ctx.fillStyle="#def1c5";ctx.font="bold 10px sans-serif";ctx.textAlign="left";ctx.fillText(`夜 ${wave} 已守住`,LEFT+17,TOP+25);
+    }
+    if(paused){ctx.fillStyle="#0b1514a6";ctx.fillRect(0,0,W,H);ctx.fillStyle="#f3f5e9";ctx.font="800 34px sans-serif";ctx.textAlign="center";ctx.fillText("暂停中",W/2,H/2);}
+    if(selected){ctx.fillStyle="#10201dbd";rr(LEFT+5,H-34,285,23,7);ctx.fill();ctx.fillStyle="#eef6dd";ctx.font="11px sans-serif";ctx.textAlign="left";ctx.fillText(`${info[selected].icon} ${info[selected].name} 已选中 · 点击空地种植`,LEFT+14,H-19);}
+  }
+  function drawPlant(p){
+    const bob=Math.sin(elapsed*2.7+p.shine)*2;
+    ctx.save();ctx.translate(p.x,p.y+bob);
+    // common earthy planting mound
+    ctx.fillStyle="#523e2d";ctx.beginPath();ctx.ellipse(0,21,28,9,0,0,Math.PI*2);ctx.fill();
+    if(p.type==="sun"){
+      ctx.strokeStyle="#5c9b56";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(0,17);ctx.quadraticCurveTo(-5,2,0,-8);ctx.stroke();
+      ctx.fillStyle="#83c968";ctx.beginPath();ctx.ellipse(-9,8,12,6,-.6,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(10,3,12,6,.55,0,Math.PI*2);ctx.fill();
+      const t=elapsed*1.3+p.shine;for(let i=0;i<9;i++){const a=t+i*Math.PI*2/9;ctx.fillStyle=i%2?"#ffd76d":"#fff19a";ctx.beginPath();ctx.ellipse(Math.cos(a)*14,-15+Math.sin(a)*14,7,11,a,0,Math.PI*2);ctx.fill();}
+      ctx.fillStyle="#8b573a";ctx.beginPath();ctx.arc(0,-15,11,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#fff2be";ctx.beginPath();ctx.arc(-4,-17,1.5,0,Math.PI*2);ctx.arc(4,-17,1.5,0,Math.PI*2);ctx.fill();
+    }else if(p.type==="seed"){
+      ctx.strokeStyle="#5c9b56";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-3,18);ctx.lineTo(-3,-5);ctx.stroke();
+      ctx.fillStyle="#86d875";ctx.beginPath();ctx.ellipse(-11,7,12,6,-.55,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(8,3,12,6,.55,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#a5e877";ctx.beginPath();ctx.ellipse(2,-8,18,15,-.2,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#517b46";ctx.beginPath();ctx.ellipse(14,-9,10,7,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#344b3b";ctx.beginPath();ctx.arc(1,-12,2,0,Math.PI*2);ctx.fill();
+    }else if(p.type==="thorn"){
+      ctx.fillStyle="#4e8954";ctx.beginPath();ctx.ellipse(0,4,18,21,0,0,Math.PI*2);ctx.fill();
+      for(let i=0;i<5;i++){ctx.fillStyle="#bce883";ctx.beginPath();ctx.arc(-9+i*4.5,-7+(i%2)*9,1.7,0,Math.PI*2);ctx.fill();}
+      ctx.fillStyle="#f09d6c";ctx.beginPath();ctx.arc(1,-16,12,0,Math.PI*2);ctx.fill();ctx.fillStyle="#ffe3b4";ctx.beginPath();ctx.arc(-3,-19,1.6,0,Math.PI*2);ctx.arc(4,-19,1.6,0,Math.PI*2);ctx.fill();
+    }else{
+      ctx.strokeStyle="#77c6b4";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(0,18);ctx.quadraticCurveTo(-4,2,0,-11);ctx.stroke();
+      ctx.fillStyle="#8fd9c0";ctx.beginPath();ctx.ellipse(-9,8,12,5,-.7,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(10,4,11,5,.6,0,Math.PI*2);ctx.fill();
+      for(let i=0;i<5;i++){const a=i*Math.PI*2/5;ctx.fillStyle=i%2?"#c4edff":"#e9fbff";ctx.beginPath();ctx.ellipse(Math.cos(a)*10,-16+Math.sin(a)*6,5,10,a,0,Math.PI*2);ctx.fill();}
+      ctx.fillStyle="#8cc9ea";ctx.beginPath();ctx.arc(0,-16,5,0,Math.PI*2);ctx.fill();
+    }
+    if(p.hp&&p.hp<110){ctx.fillStyle="#26342a";ctx.fillRect(-18,25,36,4);ctx.fillStyle="#d1ee84";ctx.fillRect(-18,25,36*clamp(p.hp/130,0,1),4);}
+    ctx.restore();
+  }
+  function drawEnemy(e){
+    ctx.save();ctx.translate(e.x,e.y);
+    const bob=Math.sin(elapsed*5+e.phase)*2.2;
+    ctx.fillStyle="#19251d55";ctx.beginPath();ctx.ellipse(0,22,21,7,0,0,Math.PI*2);ctx.fill();
+    ctx.translate(0,bob);
+    const headColor=e.hitFlash>0?"#fff3cc":e.armored?"#897899":"#8aa38a";
+    ctx.fillStyle=headColor;ctx.beginPath();ctx.ellipse(0,-2,15,18,-.12,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=e.armored?"#62576f":"#71846d";ctx.beginPath();ctx.arc(0,-11,14,Math.PI,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#f2e8d4";ctx.beginPath();ctx.ellipse(-5,-5,3,4,0,0,Math.PI*2);ctx.ellipse(5,-5,3,4,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#4b473b";ctx.beginPath();ctx.arc(-5,-5,1.3,0,Math.PI*2);ctx.arc(5,-5,1.3,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="#76514d";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-4,5);ctx.quadraticCurveTo(0,8,5,4);ctx.stroke();
+    ctx.fillStyle="#777660";rr(-14,10,28,16,6);ctx.fill();
+    ctx.strokeStyle="#a8a083";ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle="#b2bd8a";ctx.fillRect(-18,22,13,4);ctx.fillRect(5,22,13,4);
+    ctx.restore();
+    const bw=34,by=e.y-31;ctx.fillStyle="#233027";ctx.fillRect(e.x-bw/2,by,bw,4);ctx.fillStyle=e.armored?"#d3adff":"#c8ee8d";ctx.fillRect(e.x-bw/2,by,bw*clamp(e.hp/e.maxHp,0,1),4);
+    if(e.slow>0){ctx.fillStyle="#d9f8ff";ctx.font="12px sans-serif";ctx.textAlign="center";ctx.fillText("❄",e.x,e.y-35);}
+  }
+  function frame(now){
+    const dt=Math.min(.035,Math.max(0,(now-last)/1000||0));last=now;
+    if(running&&!paused)update(dt);
+    drawGarden();requestAnimationFrame(frame);
+  }
+  grid=Array.from({length:ROWS},()=>Array(COLS).fill(null));hud();requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
